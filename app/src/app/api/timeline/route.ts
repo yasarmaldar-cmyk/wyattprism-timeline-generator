@@ -9,10 +9,31 @@ function safeFilename(s: string) {
   return s.replace(/[^A-Za-z0-9._-]/g, "_");
 }
 
+type EditedTask = {
+  name: string;
+  phase?: string;
+  plannedStart: string;  // yyyy-mm-dd or ISO
+  plannedEnd: string;
+  responsibility?: string;
+};
+
 type SendWyattprismBody = ProjectInputs & {
   wp_project_id?: string;
   wp_project_code?: string;
+  // If present, override the auto-computed timeline (Ops edited tasks before sending).
+  tasks?: EditedTask[];
+  anchors?: {
+    kick_off?: string;
+    closure?: string;
+    board_meeting?: string | null;
+    agm?: string | null;
+  };
 };
+
+function toIso(s: string): string {
+  const d = new Date(s);
+  return isNaN(d.getTime()) ? s : d.toISOString();
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -65,7 +86,52 @@ export async function POST(req: NextRequest) {
         );
       }
 
-      const result = computeTimeline(inputs);
+      // If Ops sent edited tasks, use them verbatim. Otherwise compute fresh.
+      let tasks: Array<{
+        name: string;
+        phase: string;
+        plannedStart: string;
+        plannedEnd: string;
+        responsibility: string;
+      }>;
+      let anchors: {
+        kick_off: string;
+        closure: string;
+        board_meeting: string | null;
+        agm: string | null;
+      };
+
+      if (Array.isArray(inputs.tasks) && inputs.tasks.length > 0) {
+        tasks = inputs.tasks.map((t) => ({
+          name: t.name,
+          phase: t.phase ?? "",
+          plannedStart: toIso(t.plannedStart),
+          plannedEnd: toIso(t.plannedEnd),
+          responsibility: t.responsibility ?? "wp",
+        }));
+        anchors = {
+          kick_off: inputs.anchors?.kick_off ? toIso(inputs.anchors.kick_off) : new Date().toISOString(),
+          closure: inputs.anchors?.closure ? toIso(inputs.anchors.closure) : new Date().toISOString(),
+          board_meeting: inputs.anchors?.board_meeting ? toIso(inputs.anchors.board_meeting) : null,
+          agm: inputs.anchors?.agm ? toIso(inputs.anchors.agm) : null,
+        };
+      } else {
+        const result = computeTimeline(inputs);
+        tasks = result.tasks.map((t) => ({
+          name: t.name,
+          phase: t.phase,
+          plannedStart: t.startDate.toISOString(),
+          plannedEnd: t.endDate.toISOString(),
+          responsibility: t.responsibility,
+        }));
+        anchors = {
+          kick_off: result.anchors.kick_off.toISOString(),
+          closure: result.anchors.closure.toISOString(),
+          board_meeting: result.anchors.board_meeting?.toISOString() ?? null,
+          agm: result.anchors.agm?.toISOString() ?? null,
+        };
+      }
+
       const payload = {
         wp_project_id: inputs.wp_project_id,
         wp_project_code: inputs.wp_project_code,
@@ -73,19 +139,8 @@ export async function POST(req: NextRequest) {
         client_name: inputs.clientName,
         report_type: inputs.reportType,
         reporting_period: inputs.reportingPeriod,
-        anchors: {
-          kick_off: result.anchors.kick_off.toISOString(),
-          closure: result.anchors.closure.toISOString(),
-          board_meeting: result.anchors.board_meeting?.toISOString() ?? null,
-          agm: result.anchors.agm?.toISOString() ?? null,
-        },
-        tasks: result.tasks.map((t) => ({
-          name: t.name,
-          phase: t.phase,
-          plannedStart: t.startDate.toISOString(),
-          plannedEnd: t.endDate.toISOString(),
-          responsibility: t.responsibility,
-        })),
+        anchors,
+        tasks,
       };
 
       const callbackUrl = `${shellUrl.replace(/\/$/, "")}/api/timeline-callback?key=${encodeURIComponent(callbackKey)}`;
