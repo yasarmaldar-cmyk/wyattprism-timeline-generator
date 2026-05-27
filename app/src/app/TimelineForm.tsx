@@ -164,6 +164,13 @@ export default function TimelineForm({ data }: { data: LibraryData }) {
     ]);
   }
   function recomputeFromInputs() {
+    // Confirm before discarding edits — Ops will lose any tweaks.
+    if (editableTasks && editableTasks.length > 0) {
+      const ok = window.confirm(
+        "This will discard all your edits and regenerate the timeline from the project inputs. Continue?"
+      );
+      if (!ok) return;
+    }
     // Re-run preview, which overwrites editableTasks with fresh computed values.
     void handlePreview();
   }
@@ -338,6 +345,11 @@ export default function TimelineForm({ data }: { data: LibraryData }) {
             </button>
           )}
         </div>
+        {editableTasks && editableTasks.length > 0 && (
+          <p className="mt-2 text-[11px] text-zinc-500 italic">
+            Note: Excel download uses the auto-computed timeline. Your edits only go to Wyattprism.
+          </p>
+        )}
         {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
         {sendResult && <p className="mt-3 text-sm text-green-700">{sendResult}</p>}
       </section>
