@@ -349,7 +349,8 @@ export default function TimelineForm({ data }: { data: LibraryData }) {
         </div>
         {editableTasks && editableTasks.length > 0 && (
           <p className="mt-2 text-[11px] text-zinc-500 italic">
-            Note: Excel download uses the auto-computed timeline. Your edits only go to Wyattprism.
+            Note: <strong>Send to Wyattprism</strong> uses your edited tasks. The Excel download
+            still uses the auto-computed timeline.
           </p>
         )}
         {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
