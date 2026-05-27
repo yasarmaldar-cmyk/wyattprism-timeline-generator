@@ -245,6 +245,8 @@ export default function TimelineForm({ data }: { data: LibraryData }) {
   }
 
   return (
+    <div className="space-y-6">
+    {/* Top section: form (left) + anchors (right) */}
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
       <section className="rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-6 shadow-sm">
         {wpProjectId && (
@@ -354,124 +356,135 @@ export default function TimelineForm({ data }: { data: LibraryData }) {
         {sendResult && <p className="mt-3 text-sm text-green-700">{sendResult}</p>}
       </section>
 
+      {/* Right column: anchors only (compact summary) */}
+      <section className="rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-6 shadow-sm">
+        <h2 className="text-lg font-semibold mb-4">Key dates</h2>
+        {!preview ? (
+          <p className="text-sm text-zinc-500">Click &ldquo;Preview timeline&rdquo; to compute the kick-off, closure and any other anchor dates.</p>
+        ) : (
+          <div className="grid grid-cols-2 gap-2 text-xs">
+            <KV label="Kick-off" value={preview.anchors.kick_off} />
+            <KV label="Closure" value={preview.anchors.closure} />
+            {preview.anchors.board_meeting && <KV label="Board Meeting" value={preview.anchors.board_meeting} />}
+            {preview.anchors.agm && <KV label="AGM" value={preview.anchors.agm} />}
+          </div>
+        )}
+      </section>
+    </div>
+
+    {/* Tasks — full width below the form so the task names have room to breathe */}
+    {editableTasks && editableTasks.length > 0 && (
       <section className="rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-6 shadow-sm">
         <div className="flex items-baseline justify-between mb-4 gap-3 flex-wrap">
           <div>
             <h2 className="text-lg font-semibold">Tasks</h2>
-            {editableTasks && (
-              <p className="text-xs text-zinc-500 mt-0.5">
-                {editableTasks.length} task{editableTasks.length === 1 ? "" : "s"} · click any field to edit · changes go to Wyattprism when you click Send
-              </p>
-            )}
+            <p className="text-xs text-zinc-500 mt-0.5">
+              {editableTasks.length} task{editableTasks.length === 1 ? "" : "s"} · click any field to edit · changes go to Wyattprism when you click Send
+            </p>
           </div>
-          {editableTasks && (
-            <div className="flex items-center gap-2">
-              <button
-                onClick={recomputeFromInputs}
-                disabled={busy}
-                className="rounded-md border border-zinc-300 dark:border-zinc-700 px-2.5 py-1 text-xs font-medium hover:bg-zinc-100 dark:hover:bg-zinc-800 disabled:opacity-50"
-                title="Discard edits and recompute from project inputs"
-              >
-                ↺ Recompute
-              </button>
-              <button
-                onClick={addTask}
-                className="rounded-md border border-zinc-300 dark:border-zinc-700 px-2.5 py-1 text-xs font-medium hover:bg-zinc-100 dark:hover:bg-zinc-800"
-              >
-                + Add task
-              </button>
-            </div>
-          )}
+          <div className="flex items-center gap-2">
+            <button
+              onClick={recomputeFromInputs}
+              disabled={busy}
+              className="rounded-md border border-zinc-300 dark:border-zinc-700 px-2.5 py-1 text-xs font-medium hover:bg-zinc-100 dark:hover:bg-zinc-800 disabled:opacity-50"
+              title="Discard edits and recompute from project inputs"
+            >
+              ↺ Recompute
+            </button>
+            <button
+              onClick={addTask}
+              className="rounded-md border border-zinc-300 dark:border-zinc-700 px-2.5 py-1 text-xs font-medium hover:bg-zinc-100 dark:hover:bg-zinc-800"
+            >
+              + Add task
+            </button>
+          </div>
         </div>
 
-        {!preview ? (
-          <p className="text-sm text-zinc-500">Click &ldquo;Preview timeline&rdquo; to generate tasks. You can then edit them before sending to Wyattprism.</p>
-        ) : (
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-2 text-xs">
-              <KV label="Kick-off" value={preview.anchors.kick_off} />
-              <KV label="Closure" value={preview.anchors.closure} />
-              {preview.anchors.board_meeting && <KV label="Board Meeting" value={preview.anchors.board_meeting} />}
-              {preview.anchors.agm && <KV label="AGM" value={preview.anchors.agm} />}
-            </div>
-
-            <div className="overflow-y-auto max-h-[60vh] border border-zinc-200 dark:border-zinc-800 rounded-md">
-              <table className="w-full text-xs">
-                <thead className="bg-zinc-100 dark:bg-zinc-800 sticky top-0 z-10">
-                  <tr>
-                    <th className="text-left px-2 py-1.5 font-medium w-24">Phase</th>
-                    <th className="text-left px-2 py-1.5 font-medium">Task</th>
-                    <th className="text-center px-2 py-1.5 font-medium w-20">By</th>
-                    <th className="text-left px-2 py-1.5 font-medium w-32">Start</th>
-                    <th className="text-left px-2 py-1.5 font-medium w-32">End</th>
-                    <th className="text-center px-2 py-1.5 font-medium w-12">Days</th>
-                    <th className="px-1 py-1.5 w-6"></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {(editableTasks ?? []).map((t, i) => (
-                    <tr key={t.id} className="border-t border-zinc-200 dark:border-zinc-800">
-                      <td className="px-1 py-1">
-                        <input
-                          className="w-full bg-transparent border border-transparent hover:border-zinc-300 focus:border-blue-500 rounded px-1.5 py-0.5 text-zinc-600 dark:text-zinc-400 text-xs focus:outline-none focus:bg-white dark:focus:bg-zinc-800"
-                          value={t.phase}
-                          onChange={(e) => updateTask(i, { phase: e.target.value })}
-                        />
-                      </td>
-                      <td className="px-1 py-1">
-                        <input
-                          className="w-full bg-transparent border border-transparent hover:border-zinc-300 focus:border-blue-500 rounded px-1.5 py-0.5 text-xs focus:outline-none focus:bg-white dark:focus:bg-zinc-800"
-                          value={t.name}
-                          onChange={(e) => updateTask(i, { name: e.target.value })}
-                        />
-                      </td>
-                      <td className="px-1 py-1 text-center">
-                        <select
-                          className="bg-transparent border border-transparent hover:border-zinc-300 focus:border-blue-500 rounded px-1 py-0.5 text-xs focus:outline-none focus:bg-white dark:focus:bg-zinc-800"
-                          value={t.responsibility}
-                          onChange={(e) => updateTask(i, { responsibility: e.target.value as EditableTask["responsibility"] })}
-                        >
-                          <option value="wp">WP</option>
-                          <option value="client">Client</option>
-                          <option value="both">Both</option>
-                        </select>
-                      </td>
-                      <td className="px-1 py-1">
-                        <input
-                          type="date"
-                          className="w-full bg-transparent border border-transparent hover:border-zinc-300 focus:border-blue-500 rounded px-1.5 py-0.5 text-xs focus:outline-none focus:bg-white dark:focus:bg-zinc-800"
-                          value={t.startDate}
-                          onChange={(e) => updateTask(i, { startDate: e.target.value })}
-                        />
-                      </td>
-                      <td className="px-1 py-1">
-                        <input
-                          type="date"
-                          className="w-full bg-transparent border border-transparent hover:border-zinc-300 focus:border-blue-500 rounded px-1.5 py-0.5 text-xs focus:outline-none focus:bg-white dark:focus:bg-zinc-800"
-                          value={t.endDate}
-                          onChange={(e) => updateTask(i, { endDate: e.target.value })}
-                        />
-                      </td>
-                      <td className="px-2 py-1 text-center text-zinc-500 text-xs">
-                        {daysBetween(t.startDate, t.endDate)}
-                      </td>
-                      <td className="px-1 py-1 text-center">
-                        <button
-                          onClick={() => deleteTask(i)}
-                          title="Remove this task"
-                          className="text-zinc-400 hover:text-red-600 text-base leading-none cursor-pointer"
-                        >
-                          ×
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
+        <div className="overflow-y-auto max-h-[70vh] border border-zinc-200 dark:border-zinc-800 rounded-md">
+          <table className="w-full text-sm" style={{ tableLayout: "fixed" }}>
+            <colgroup>
+              <col style={{ width: "13%" }} />
+              <col />
+              <col style={{ width: "100px" }} />
+              <col style={{ width: "150px" }} />
+              <col style={{ width: "150px" }} />
+              <col style={{ width: "70px" }} />
+              <col style={{ width: "40px" }} />
+            </colgroup>
+            <thead className="bg-zinc-100 dark:bg-zinc-800 sticky top-0 z-10">
+              <tr>
+                <th className="text-left px-3 py-2 font-medium text-xs uppercase tracking-wider text-zinc-500">Phase</th>
+                <th className="text-left px-3 py-2 font-medium text-xs uppercase tracking-wider text-zinc-500">Task</th>
+                <th className="text-center px-3 py-2 font-medium text-xs uppercase tracking-wider text-zinc-500">By</th>
+                <th className="text-left px-3 py-2 font-medium text-xs uppercase tracking-wider text-zinc-500">Start</th>
+                <th className="text-left px-3 py-2 font-medium text-xs uppercase tracking-wider text-zinc-500">End</th>
+                <th className="text-center px-3 py-2 font-medium text-xs uppercase tracking-wider text-zinc-500">Days</th>
+                <th className="px-1 py-2"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {editableTasks.map((t, i) => (
+                <tr key={t.id} className="border-t border-zinc-200 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800/40">
+                  <td className="px-2 py-1.5">
+                    <input
+                      className="w-full bg-transparent border border-transparent hover:border-zinc-300 focus:border-blue-500 rounded px-2 py-1 text-zinc-600 dark:text-zinc-400 text-xs focus:outline-none focus:bg-white dark:focus:bg-zinc-800"
+                      value={t.phase}
+                      onChange={(e) => updateTask(i, { phase: e.target.value })}
+                    />
+                  </td>
+                  <td className="px-2 py-1.5">
+                    <input
+                      className="w-full bg-transparent border border-transparent hover:border-zinc-300 focus:border-blue-500 rounded px-2 py-1 text-sm focus:outline-none focus:bg-white dark:focus:bg-zinc-800"
+                      value={t.name}
+                      onChange={(e) => updateTask(i, { name: e.target.value })}
+                    />
+                  </td>
+                  <td className="px-2 py-1.5 text-center">
+                    <select
+                      className="bg-transparent border border-transparent hover:border-zinc-300 focus:border-blue-500 rounded px-1.5 py-1 text-xs focus:outline-none focus:bg-white dark:focus:bg-zinc-800"
+                      value={t.responsibility}
+                      onChange={(e) => updateTask(i, { responsibility: e.target.value as EditableTask["responsibility"] })}
+                    >
+                      <option value="wp">WP</option>
+                      <option value="client">Client</option>
+                      <option value="both">Both</option>
+                    </select>
+                  </td>
+                  <td className="px-2 py-1.5">
+                    <input
+                      type="date"
+                      className="w-full bg-transparent border border-transparent hover:border-zinc-300 focus:border-blue-500 rounded px-2 py-1 text-xs focus:outline-none focus:bg-white dark:focus:bg-zinc-800"
+                      value={t.startDate}
+                      onChange={(e) => updateTask(i, { startDate: e.target.value })}
+                    />
+                  </td>
+                  <td className="px-2 py-1.5">
+                    <input
+                      type="date"
+                      className="w-full bg-transparent border border-transparent hover:border-zinc-300 focus:border-blue-500 rounded px-2 py-1 text-xs focus:outline-none focus:bg-white dark:focus:bg-zinc-800"
+                      value={t.endDate}
+                      onChange={(e) => updateTask(i, { endDate: e.target.value })}
+                    />
+                  </td>
+                  <td className="px-2 py-1.5 text-center text-zinc-500 text-xs">
+                    {daysBetween(t.startDate, t.endDate)}
+                  </td>
+                  <td className="px-1 py-1.5 text-center">
+                    <button
+                      onClick={() => deleteTask(i)}
+                      title="Remove this task"
+                      className="text-zinc-400 hover:text-red-600 text-lg leading-none cursor-pointer"
+                    >
+                      ×
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </section>
+    )}
     </div>
   );
 }
